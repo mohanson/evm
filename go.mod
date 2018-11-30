@@ -11,6 +11,7 @@ require (
 	github.com/rs/cors v1.6.0 // indirect
 	github.com/syndtr/goleveldb v0.0.0-20181128100959-b001fa50d6b2 // indirect
 	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85 // indirect
+	golang.org/x/net v0.0.0-20181129055619-fae4c4e3ad76 // indirect
 	golang.org/x/sys v0.0.0-20181128092732-4ed8d59d0b35 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )

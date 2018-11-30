@@ -1,4 +1,4 @@
-module github.com/mohanson/evmfun
+module github.com/mohanson/evm
 
 require (
 	github.com/allegro/bigcache v1.1.0 // indirect

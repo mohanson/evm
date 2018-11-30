@@ -33,7 +33,6 @@ func main() {
 	gassum := 0
 	for _, e := range logger.StructLogs() {
 		gassum += int(e.GasCost)
-
 		seps := []string{}
 		seps = append(seps, fmt.Sprintf("[%04d]", e.Pc))
 		if e.Op >= 0x60 && e.Op <= 0x7F {

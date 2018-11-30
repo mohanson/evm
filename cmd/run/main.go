@@ -48,5 +48,5 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Printf("Return: %#x\n", ret)
-	fmt.Printf("Cost: %d\n", gassum)
+	fmt.Printf("Cost:   %d\n", gassum)
 }

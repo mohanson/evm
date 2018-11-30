@@ -1,4 +1,4 @@
-# Notes on the EVM
+Inspired by [evm-tools]. (https://github.com/CoinCulture/evm-tools)(But this project has stopped development and is now unable to compile).
 
 This is a guide to understanding the EVM, its relationship with solidity, and how to use some debugging tools.
 

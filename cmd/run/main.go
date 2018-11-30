@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/hex"
+	"flag"
 	"fmt"
 	"strings"
 
@@ -9,17 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 )
 
-func test() {
-	ret, _, err := runtime.Execute(common.FromHex("6060604052600a8060106000396000f360606040526008565b00"), nil, nil)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(ret)
-	// Output:
-	// [96 96 96 64 82 96 8 86 91 0]
-}
+var flVerbose = flag.Bool("v", false, "Be verbose")
 
 func main() {
+	flag.Parse()
+
 	cfg := runtime.Config{}
 	cfg.EVMConfig.Debug = true
 	logger := vm.NewStructLogger(nil)
@@ -45,6 +41,24 @@ func main() {
 		seps = append(seps, "||")
 		seps = append(seps, fmt.Sprintf("GasCost=%-5d Gas=%d", e.GasCost, e.Gas))
 		fmt.Println(strings.Join(seps, " "))
+		if *flVerbose {
+			l := len(e.Stack)
+			fmt.Printf("Stk.Len = %d\n", l)
+			for i := 0; i < l; i++ {
+				fmt.Printf("%04d: %#x\n", i, e.Stack[l-i-1])
+			}
+			fmt.Printf("Mem.Len = %d\n", e.MemorySize)
+
+			for i := 0; i < e.MemorySize; i += 16 {
+				src := e.Memory[i:i+16]
+				dst := make([]string, 16)
+				for i, e := range src {
+					dst[i] = hex.EncodeToString([]byte{e})
+				}
+				fmt.Println(strings.Join(dst, " "))
+			}
+			fmt.Println()
+		}
 	}
 	fmt.Println()
 	fmt.Printf("Return: %#x\n", ret)

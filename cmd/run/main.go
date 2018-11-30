@@ -50,7 +50,7 @@ func main() {
 			fmt.Printf("Mem.Len = %d\n", e.MemorySize)
 
 			for i := 0; i < e.MemorySize; i += 16 {
-				src := e.Memory[i:i+16]
+				src := e.Memory[i : i+16]
 				dst := make([]string, 16)
 				for i, e := range src {
 					dst[i] = hex.EncodeToString([]byte{e})

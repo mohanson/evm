@@ -10,7 +10,7 @@ def call(command):
 
 
 def main():
-    call(f'go install github.com/mohanson/evmfun/cmd/evmfun')
+    call(f'go install github.com/mohanson/evm/cmd/evm')
 
 
 if __name__ == '__main__':

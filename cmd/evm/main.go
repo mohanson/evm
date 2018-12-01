@@ -13,13 +13,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 )
 
-const help = `usage: evmfun <command> [<args>]
+const help = `usage: evm <command> [<args>]
 
 The most commonly used daze commands are:
   disasm     Disassemble bytecode
   exec       Execute bytecode
 
-Run 'evmfun <command> -h' for more information on a command.`
+Run 'evm <command> -h' for more information on a command.`
 
 func printHelpAndExit() {
 	fmt.Println(help)

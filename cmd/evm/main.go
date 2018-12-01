@@ -6,7 +6,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -27,10 +26,11 @@ func printHelpAndExit() {
 }
 
 func exDisasm() {
+	var (
+		flCode = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
+	)
 	flag.Parse()
-	codeStr := flag.Arg(0)
-	codeStr = strings.TrimSpace(codeStr)
-	code := common.FromHex(codeStr)
+	code := common.FromHex(*flCode)
 	for pc := 0; pc < len(code); pc++ {
 		op := vm.OpCode(code[pc])
 		fmt.Printf("[%04d] %v", pc, op)
@@ -56,15 +56,15 @@ func exDisasm() {
 func exExec() {
 	var (
 		flBlockNumber = flag.Int("number", 0, "block number")
-		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase address")
-		flDifficulty  = flag.Int("difficulty", 0, "mining difficulty")
-		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit for the evm")
-		flGasPrice    = flag.Int("gasprice", 1, "price set for the evm")
-		flInput       = flag.String("input", "", "input for the evm")
+		flCode        = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
+		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
+		flData        = flag.String("data", "0x", "data")
+		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
+		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
+		flGasPrice    = flag.Int("gasprice", 1, "gas price")
 		flOrigin      = flag.String("origin", common.Address{}.String(), "sender")
-		flValue       = flag.Int64("value", 0, "value set for the evm")
+		flValue       = flag.Int64("value", 0, "value")
 	)
-
 	flag.Parse()
 	cfg := runtime.Config{}
 	cfg.BlockNumber = big.NewInt(int64(*flBlockNumber))
@@ -78,7 +78,7 @@ func exExec() {
 	slg := vm.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
 
-	ret, sdb, err := runtime.Execute(common.FromHex(flag.Arg(0)), common.FromHex(*flInput), &cfg)
+	ret, sdb, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
 	if err != nil {
 		log.Fatalln(err)
 	}

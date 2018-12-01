@@ -4,7 +4,7 @@ This is a guide to understanding the EVM, its relationship with solidity, and ho
 
 # Requirements
 - evm has been tested and is known to run on Linux/Ubuntu, macOS and Windows(10). It will likely work fine on most OS.
-- Go 1.11 or newer.
+- [Go](https://golang.org/dl/) 1.11 or newer.
 
 # Installation
 
@@ -30,7 +30,7 @@ To disassemble, run `evm disasm 0x6005600401`, which produces:
 
 # Feat: execute bytecode
 
-I found a code in the test library: [https://github.com/ethereum/tests/blob/develop/VMTests/vmSystemOperations/return0.json](https://github.com/ethereum/tests/blob/develop/VMTests/vmSystemOperations/return0.json). Execute the test now
+Let's use a test case to demonstrate: [return0.json](https://github.com/ethereum/tests/blob/develop/VMTests/vmSystemOperations/return0.json). To execute the test, run
 
 ```
 evm exec 0x603760005360005160005560016000f3

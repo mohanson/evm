@@ -20,6 +20,8 @@ const help = `usage: evm <command> [<args>]
 The most commonly used daze commands are:
   disasm     Disassemble bytecode
   exec       Execute bytecode
+  create     Create a contract
+  call       Call contract
 
 Run 'evm <command> -h' for more information on a command.`
 
@@ -57,12 +59,14 @@ func exDisasm() error {
 	return nil
 }
 
-func exExec() error {
+func exMacall(subcmd string) error {
 	var (
+		flAddress     = flag.String("address", common.Address{}.String(), "address")
 		flBlockNumber = flag.Int("number", 0, "block number")
 		flCode        = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
 		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
 		flData        = flag.String("data", "0x", "data")
+		flDB          = flag.String("db", "", "database")
 		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
 		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
 		flGasPrice    = flag.Int("gasprice", 1, "gas price")
@@ -81,106 +85,50 @@ func exExec() error {
 	cfg.EVMConfig.Debug = true
 	slg := vm.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
-	ret, _, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
 	if err != nil {
-		return err
+		log.Fatalln(err)
 	}
-	vm.WriteTrace(os.Stdout, slg.StructLogs())
-	fmt.Println()
-	fmt.Printf("Return = %#x\n", ret)
+	if subcmd == "create" || subcmd == "call" {
+		if err := evm.LoadStateDB(sdb, *flDB); err != nil {
+			if os.IsExist(err) {
+				return err
+			}
+		}
+	}
+	cfg.State = sdb
+	switch subcmd {
+	case "exec":
+		ret, _, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Return  =", common.Bytes2Hex(ret))
+		return nil
+	case "create":
+		_, add, gas, err := runtime.Create(common.Hex2Bytes(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Cost    =", *flGasLimit-int(gas))
+		fmt.Println("Address =", add.String())
+		return evm.SaveStateDB(sdb, *flDB)
+	case "call":
+		ret, gas, err := runtime.Call(common.HexToAddress(*flAddress), common.FromHex(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Cost    =", *flGasLimit-int(gas))
+		fmt.Println("Return  =", common.Bytes2Hex(ret))
+		return evm.SaveStateDB(sdb, *flDB)
+	}
 	return nil
-}
-
-func exCreate() error {
-	var (
-		flBlockNumber = flag.Int("number", 0, "block number")
-		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
-		flData        = flag.String("data", "0x", "data")
-		flDB          = flag.String("db", "", "database")
-		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
-		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
-		flGasPrice    = flag.Int("gasprice", 1, "gas price")
-		flOrigin      = flag.String("origin", common.Address{}.String(), "sender")
-		flValue       = flag.Int64("value", 0, "value")
-	)
-	flag.Parse()
-	if *flDB == "" {
-		log.Fatalln("evm: missing -db operand")
-	}
-	cfg := runtime.Config{}
-	cfg.BlockNumber = big.NewInt(int64(*flBlockNumber))
-	cfg.Coinbase = common.HexToAddress(*flCoinbase)
-	cfg.Difficulty = big.NewInt(int64(*flDifficulty))
-	cfg.GasLimit = uint64(*flGasLimit)
-	cfg.GasPrice = big.NewInt(int64(*flGasPrice))
-	cfg.Origin = common.HexToAddress(*flOrigin)
-	cfg.Value = big.NewInt(*flValue)
-	cfg.EVMConfig.Debug = true
-	slg := vm.NewStructLogger(nil)
-	cfg.EVMConfig.Tracer = slg
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if err := evm.LoadStateDB(sdb, *flDB); err != nil {
-		if os.IsExist(err) {
-			return err
-		}
-	}
-	cfg.State = sdb
-	_, add, gas, err := runtime.Create(common.Hex2Bytes(*flData), &cfg)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Cost   :", gas)
-	fmt.Println("Address:", add.String())
-	return evm.SaveStateDB(sdb, *flDB)
-}
-
-func exCall() error {
-	var (
-		flAddress     = flag.String("address", common.Address{}.String(), "address")
-		flBlockNumber = flag.Int("number", 0, "block number")
-		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
-		flData        = flag.String("data", "0x", "data")
-		flDB          = flag.String("db", "", "database")
-		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
-		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
-		flGasPrice    = flag.Int("gasprice", 1, "gas price")
-		flOrigin      = flag.String("origin", common.Address{}.String(), "sender")
-		flValue       = flag.Int64("value", 0, "value")
-	)
-	flag.Parse()
-	if *flDB == "" {
-		log.Fatalln("evm: missing -db operand")
-	}
-	cfg := runtime.Config{}
-	cfg.BlockNumber = big.NewInt(int64(*flBlockNumber))
-	cfg.Coinbase = common.HexToAddress(*flCoinbase)
-	cfg.Difficulty = big.NewInt(int64(*flDifficulty))
-	cfg.GasLimit = uint64(*flGasLimit)
-	cfg.GasPrice = big.NewInt(int64(*flGasPrice))
-	cfg.Origin = common.HexToAddress(*flOrigin)
-	cfg.Value = big.NewInt(*flValue)
-	cfg.EVMConfig.Debug = true
-	slg := vm.NewStructLogger(nil)
-	cfg.EVMConfig.Tracer = slg
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if err := evm.LoadStateDB(sdb, *flDB); err != nil {
-		if os.IsExist(err) {
-			return err
-		}
-	}
-	cfg.State = sdb
-	ret, gas, err := runtime.Call(common.HexToAddress(*flAddress), common.FromHex(*flData), &cfg)
-	vm.WriteTrace(os.Stdout, slg.StructLogs())
-	fmt.Println()
-	fmt.Println("Cost:", gas)
-	fmt.Println("Return:", common.Bytes2Hex(ret))
-	return evm.SaveStateDB(sdb, *flDB)
 }
 
 func main() {
@@ -190,24 +138,15 @@ func main() {
 	subCommand := os.Args[1]
 	os.Args = os.Args[1:len(os.Args)]
 	var err error
-	if subCommand == "disasm" {
-		err = exDisasm()
-	}
 	switch subCommand {
-	case "exec":
-		err = exExec()
-	case "create":
-		err = exCreate()
-	case "call":
-		err = exCall()
+	case "disasm":
+		err = exDisasm()
+	case "exec", "create", "call":
+		err = exMacall(subCommand)
 	default:
 		printHelpAndExit()
 	}
 	if err != nil {
 		log.Fatalln(err)
 	}
-}
-
-func pick() {
-	_ = evm.SaveStateDB
 }

@@ -10,11 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 )
 
-func HexToBig(s string) *big.Int {
-	i, _ := new(big.Int).SetString(s, 16)
-	return i
-}
-
 func SaveStateDB(db *state.StateDB, fn string) error {
 	f, err := os.OpenFile(fn, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -48,7 +43,8 @@ func LoadStateDB(db *state.StateDB, fn string) error {
 	for add, acc := range dump.Accounts {
 		add := common.HexToAddress(add)
 		db.CreateAccount(add)
-		db.SetBalance(add, HexToBig(acc.Balance))
+		balance, _ := new(big.Int).SetString(acc.Balance, 16)
+		db.SetBalance(add, balance)
 		db.SetNonce(add, acc.Nonce)
 		code, err := hex.DecodeString(acc.Code)
 		if err != nil {

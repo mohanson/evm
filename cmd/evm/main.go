@@ -8,8 +8,11 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/mohanson/evm"
 )
 
 const help = `usage: evm <command> [<args>]
@@ -17,6 +20,8 @@ const help = `usage: evm <command> [<args>]
 The most commonly used daze commands are:
   disasm     Disassemble bytecode
   exec       Execute bytecode
+  create     Create a contract
+  call       Call contract
 
 Run 'evm <command> -h' for more information on a command.`
 
@@ -25,7 +30,7 @@ func printHelpAndExit() {
 	os.Exit(0)
 }
 
-func exDisasm() {
+func exDisasm() error {
 	var (
 		flCode = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
 	)
@@ -51,14 +56,17 @@ func exDisasm() {
 		}
 		fmt.Println()
 	}
+	return nil
 }
 
-func exExec() {
+func exMacall(subcmd string) error {
 	var (
+		flAddress     = flag.String("address", common.Address{}.String(), "address")
 		flBlockNumber = flag.Int("number", 0, "block number")
 		flCode        = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
 		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
 		flData        = flag.String("data", "0x", "data")
+		flDB          = flag.String("db", "", "database")
 		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
 		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
 		flGasPrice    = flag.Int("gasprice", 1, "gas price")
@@ -77,17 +85,50 @@ func exExec() {
 	cfg.EVMConfig.Debug = true
 	slg := vm.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
-
-	ret, sdb, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if sdb.Error() != nil {
-		log.Fatalln(sdb.Error())
+	if subcmd == "create" || subcmd == "call" {
+		if err := evm.LoadStateDB(sdb, *flDB); err != nil {
+			if os.IsExist(err) {
+				return err
+			}
+		}
 	}
-	vm.WriteTrace(os.Stdout, slg.StructLogs())
-	fmt.Println()
-	fmt.Printf("Return = %#x\n", ret)
+	cfg.State = sdb
+	switch subcmd {
+	case "exec":
+		ret, _, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Return  =", common.Bytes2Hex(ret))
+		return nil
+	case "create":
+		_, add, gas, err := runtime.Create(common.Hex2Bytes(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Cost    =", *flGasLimit-int(gas))
+		fmt.Println("Address =", add.String())
+		return evm.SaveStateDB(sdb, *flDB)
+	case "call":
+		ret, gas, err := runtime.Call(common.HexToAddress(*flAddress), common.FromHex(*flData), &cfg)
+		if err != nil {
+			return err
+		}
+		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		fmt.Println()
+		fmt.Println("Cost    =", *flGasLimit-int(gas))
+		fmt.Println("Return  =", common.Bytes2Hex(ret))
+		return evm.SaveStateDB(sdb, *flDB)
+	}
+	return nil
 }
 
 func main() {
@@ -96,12 +137,16 @@ func main() {
 	}
 	subCommand := os.Args[1]
 	os.Args = os.Args[1:len(os.Args)]
+	var err error
 	switch subCommand {
 	case "disasm":
-		exDisasm()
-	case "exec":
-		exExec()
+		err = exDisasm()
+	case "exec", "create", "call":
+		err = exMacall(subCommand)
 	default:
 		printHelpAndExit()
+	}
+	if err != nil {
+		log.Fatalln(err)
 	}
 }

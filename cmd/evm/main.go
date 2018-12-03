@@ -8,8 +8,11 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/mohanson/evm"
 )
 
 const help = `usage: evm <command> [<args>]
@@ -25,7 +28,7 @@ func printHelpAndExit() {
 	os.Exit(0)
 }
 
-func exDisasm() {
+func exDisasm() error {
 	var (
 		flCode = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
 	)
@@ -51,9 +54,10 @@ func exDisasm() {
 		}
 		fmt.Println()
 	}
+	return nil
 }
 
-func exExec() {
+func exExec() error {
 	var (
 		flBlockNumber = flag.Int("number", 0, "block number")
 		flCode        = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
@@ -64,6 +68,7 @@ func exExec() {
 		flGasPrice    = flag.Int("gasprice", 1, "gas price")
 		flOrigin      = flag.String("origin", common.Address{}.String(), "sender")
 		flValue       = flag.Int64("value", 0, "value")
+		flDB          = flag.String("db", "", "persistence db")
 	)
 	flag.Parse()
 	cfg := runtime.Config{}
@@ -77,17 +82,35 @@ func exExec() {
 	cfg.EVMConfig.Debug = true
 	slg := vm.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
-
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
+	if err != nil {
+		return err
+	}
+	if *flDB != "" {
+		if err := evm.LoadStateDB(sdb, *flDB); err != nil {
+			if os.IsExist(err) {
+				return err
+			}
+		}
+	}
+	cfg.State = sdb
+	account := common.HexToAddress("000000000000000000000000636f6e7472616374")
+	k := common.HexToHash("0000000000000000000000000000000000000000000000000000000000000000")
+	log.Println(cfg.State.GetState(account, k))
 	ret, sdb, err := runtime.Execute(common.FromHex(*flCode), common.FromHex(*flData), &cfg)
 	if err != nil {
-		log.Fatalln(err)
-	}
-	if sdb.Error() != nil {
-		log.Fatalln(sdb.Error())
+		return err
 	}
 	vm.WriteTrace(os.Stdout, slg.StructLogs())
 	fmt.Println()
 	fmt.Printf("Return = %#x\n", ret)
+
+	// if *flDB != "" {
+	// 	if err := evm.SaveStateDB(sdb, *flDB); err != nil {
+	// 		return err
+	// 	}
+	// }
+	return nil
 }
 
 func main() {
@@ -96,12 +119,16 @@ func main() {
 	}
 	subCommand := os.Args[1]
 	os.Args = os.Args[1:len(os.Args)]
+	var err error
 	switch subCommand {
 	case "disasm":
-		exDisasm()
+		err = exDisasm()
 	case "exec":
-		exExec()
+		err = exExec()
 	default:
 		printHelpAndExit()
+	}
+	if err != nil {
+		log.Fatalln(err)
 	}
 }

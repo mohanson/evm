@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 
@@ -32,7 +32,7 @@ func printHelpAndExit() {
 
 func exDisasm() error {
 	var (
-		flCode = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
+		flCode = flag.String("code", "", "bytecode")
 	)
 	flag.Parse()
 	code := common.FromHex(*flCode)
@@ -61,16 +61,16 @@ func exDisasm() error {
 
 func exMacall(subcmd string) error {
 	var (
-		flAddress     = flag.String("address", common.Address{}.String(), "address")
+		flAddress     = flag.String("address", "", "address")
 		flBlockNumber = flag.Int("number", 0, "block number")
-		flCode        = flag.String("code", "0x603760005360005160005560016000f3", "bytecode")
-		flCoinbase    = flag.String("coinbase", common.Address{}.String(), "coinbase")
-		flData        = flag.String("data", "0x", "data")
+		flCode        = flag.String("code", "", "bytecode")
+		flCoinbase    = flag.String("coinbase", "", "coinbase")
+		flData        = flag.String("data", "", "data")
 		flDB          = flag.String("db", "", "database")
 		flDifficulty  = flag.Int("difficulty", 0, "difficulty")
 		flGasLimit    = flag.Int("gaslimit", 100000, "gas limit")
 		flGasPrice    = flag.Int("gasprice", 1, "gas price")
-		flOrigin      = flag.String("origin", common.Address{}.String(), "sender")
+		flOrigin      = flag.String("origin", "", "sender")
 		flValue       = flag.Int64("value", 0, "value")
 	)
 	flag.Parse()
@@ -87,9 +87,12 @@ func exMacall(subcmd string) error {
 	cfg.EVMConfig.Tracer = slg
 	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	if subcmd == "create" || subcmd == "call" {
+		if *flDB == "" {
+			return errors.New("evm: missing -db operand")
+		}
 		if err := evm.LoadStateDB(sdb, *flDB); err != nil {
 			if os.IsExist(err) {
 				return err
@@ -147,6 +150,7 @@ func main() {
 		printHelpAndExit()
 	}
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

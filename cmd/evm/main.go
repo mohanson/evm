@@ -111,7 +111,7 @@ func exMacall(subcmd string) error {
 		fmt.Println("Return  =", common.Bytes2Hex(ret))
 		return nil
 	case "create":
-		_, add, gas, err := runtime.Create(common.Hex2Bytes(*flData), &cfg)
+		_, add, gas, err := runtime.Create(common.FromHex(*flData), &cfg)
 		if err != nil {
 			return err
 		}

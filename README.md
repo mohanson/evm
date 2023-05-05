@@ -9,20 +9,20 @@ This is a guide to understanding the EVM, its relationship with solidity, and ho
 # Installation
 
 ```sh
-go get github.com/mohanson/evm/cmd/evm
+$ go get github.com/mohanson/evm/cmd/evm
 ```
 
 # Feat: disassemble bytecode
 
 Here is some very simple bytecode I wrote:
 
-```
+```text
 0x6005600401
 ```
 
 To disassemble, run `evm disasm -code 0x6005600401`, which produces:
 
-```
+```text
 [0000] PUSH1 0x05
 [0002] PUSH1 0x04
 [0004] ADD
@@ -36,7 +36,7 @@ Let's use a test case to demonstrate: [return0.json](https://github.com/ethereum
 $ evm exec -code 0x603760005360005160005560016000f3
 ```
 
-```
+```text
 [Many Outputs]
 ...
 
@@ -49,7 +49,7 @@ Perfect!
 
 Let us begin with the most basic example. It is fine if you do not understand everything right now, we will go into more detail later. Create a file named "SimpleStorage.sol" with content:
 
-```
+```text
 pragma solidity ^0.4.24;
 
 contract SimpleStorage {

@@ -17,11 +17,10 @@ func SaveStateDB(db *state.StateDB, fn string) error {
 	}
 	defer f.Close()
 	db.Commit(false)
-	dump := db.RawDump()
+	dump := db.RawDump(false, false, false)
 	for add, acc := range dump.Accounts {
-		add := common.HexToAddress(add)
 		for k := range acc.Storage {
-			v := db.GetState(add, common.HexToHash(k))
+			v := db.GetState(add, k)
 			acc.Storage[k] = v.String()
 		}
 	}
@@ -41,7 +40,6 @@ func LoadStateDB(db *state.StateDB, fn string) error {
 		return err
 	}
 	for add, acc := range dump.Accounts {
-		add := common.HexToAddress(add)
 		db.CreateAccount(add)
 		balance, _ := new(big.Int).SetString(acc.Balance, 16)
 		db.SetBalance(add, balance)
@@ -52,7 +50,7 @@ func LoadStateDB(db *state.StateDB, fn string) error {
 		}
 		db.SetCode(add, code)
 		for k, v := range acc.Storage {
-			db.SetState(add, common.HexToHash(k), common.HexToHash(v))
+			db.SetState(add, k, common.HexToHash(v))
 		}
 	}
 	return nil

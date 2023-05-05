@@ -20,7 +20,7 @@ func SaveStateDB(db *state.StateDB, fn string) error {
 	dump := db.RawDump()
 	for add, acc := range dump.Accounts {
 		add := common.HexToAddress(add)
-		for k, _ := range acc.Storage {
+		for k := range acc.Storage {
 			v := db.GetState(add, common.HexToHash(k))
 			acc.Storage[k] = v.String()
 		}

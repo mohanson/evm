@@ -8,10 +8,10 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/mohanson/evm"
 )
 
@@ -85,7 +85,7 @@ func exMacall(subcmd string) error {
 	cfg.EVMConfig.Debug = true
 	slg := vm.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(ethdb.NewMemDatabase()))
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 	if err != nil {
 		return err
 	}

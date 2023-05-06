@@ -1,7 +1,6 @@
 package evm
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"os"
@@ -17,7 +16,8 @@ func SaveStateDB(db *state.StateDB, fn string) error {
 	}
 	defer f.Close()
 	db.Commit(false)
-	dump := db.RawDump(false, false, false)
+	db.IntermediateRoot(true)
+	dump := db.RawDump(nil)
 	for add, acc := range dump.Accounts {
 		for k := range acc.Storage {
 			v := db.GetState(add, k)
@@ -44,11 +44,7 @@ func LoadStateDB(db *state.StateDB, fn string) error {
 		balance, _ := new(big.Int).SetString(acc.Balance, 16)
 		db.SetBalance(add, balance)
 		db.SetNonce(add, acc.Nonce)
-		code, err := hex.DecodeString(acc.Code)
-		if err != nil {
-			return err
-		}
-		db.SetCode(add, code)
+		db.SetCode(add, acc.Code)
 		for k, v := range acc.Storage {
 			db.SetState(add, k, common.HexToHash(v))
 		}

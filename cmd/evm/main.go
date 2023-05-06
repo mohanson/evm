@@ -84,7 +84,6 @@ func exMacall(subcmd string) error {
 	cfg.GasPrice = big.NewInt(int64(*flGasPrice))
 	cfg.Origin = common.HexToAddress(*flOrigin)
 	cfg.Value = big.NewInt(*flValue)
-	cfg.EVMConfig.Debug = true
 	slg := logger.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
 	rdb := state.NewDatabaseWithConfig(rawdb.NewMemoryDatabase(), &trie.Config{Preimages: true})

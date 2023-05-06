@@ -12,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/mohanson/evm"
 )
 
@@ -83,9 +85,10 @@ func exMacall(subcmd string) error {
 	cfg.Origin = common.HexToAddress(*flOrigin)
 	cfg.Value = big.NewInt(*flValue)
 	cfg.EVMConfig.Debug = true
-	slg := vm.NewStructLogger(nil)
+	slg := logger.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = slg
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	rdb := state.NewDatabaseWithConfig(rawdb.NewMemoryDatabase(), &trie.Config{Preimages: true})
+	sdb, err := state.New(common.Hash{}, rdb, nil)
 	if err != nil {
 		return err
 	}
@@ -106,7 +109,7 @@ func exMacall(subcmd string) error {
 		if err != nil {
 			return err
 		}
-		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		logger.WriteTrace(os.Stdout, slg.StructLogs())
 		fmt.Println()
 		fmt.Println("Return  =", common.Bytes2Hex(ret))
 		return nil
@@ -115,7 +118,7 @@ func exMacall(subcmd string) error {
 		if err != nil {
 			return err
 		}
-		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		logger.WriteTrace(os.Stdout, slg.StructLogs())
 		fmt.Println()
 		fmt.Println("Cost    =", *flGasLimit-int(gas))
 		fmt.Println("Address =", add.String())
@@ -125,7 +128,7 @@ func exMacall(subcmd string) error {
 		if err != nil {
 			return err
 		}
-		vm.WriteTrace(os.Stdout, slg.StructLogs())
+		logger.WriteTrace(os.Stdout, slg.StructLogs())
 		fmt.Println()
 		fmt.Println("Cost    =", *flGasLimit-int(gas))
 		fmt.Println("Return  =", common.Bytes2Hex(ret))
